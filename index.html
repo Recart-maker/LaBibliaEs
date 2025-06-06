@@ -418,12 +418,96 @@
                 width: 100%; /* Take full width on smaller screens */
             }
         }
+
+        /* --- Nuevos estilos para esconder la sección de controles --- */
+.controls.hidden {
+    max-height: 0; /* Colapsa la altura a cero */
+    padding: 0 20px; /* Elimina el padding vertical, mantiene horizontal */
+    border: none; /* Quita el borde */
+    box-shadow: none; /* Quita la sombra */
+    opacity: 0; /* Hace el contenido completamente transparente */
+    pointer-events: none; /* Evita que el ratón interactúe con elementos ocultos */
+    transition: max-height 0.5s ease-out, padding 0.5s ease-out, opacity 0.5s ease-out, border 0.5s ease-out; /* Transición suave */
+    margin-bottom: 0; /* Elimina el margen inferior */
+}
+
+/* Ajusta el bible-display para que ocupe más espacio cuando los controles están ocultos */
+.bible-display.expanded {
+    max-height: calc(90vh - 40px); /* Ajusta la altura para ocupar casi toda la ventana */
+    transition: max-height 0.5s ease-out; /* Transición suave */
+}
+
+/* --- Estilos para el botón de alternar controles --- */
+.toggle-controls-btn {
+    position: fixed; /* Posiciona el botón de forma fija en la pantalla */
+    top: 20px; /* A 20px del borde superior */
+    right: 20px; /* A 20px del borde derecho */
+    z-index: 20; /* Asegura que esté por encima de otros elementos */
+    padding: 10px 15px;
+    background: rgba(0, 80, 160, 0.8); /* Fondo azul semitransparente */
+    color: #66ccff; /* Color del texto */
+    border: 1px solid #00aaff; /* Borde sutil */
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex; /* Para alinear el icono y el texto */
+    align-items: center;
+    gap: 8px; /* Espacio entre icono y texto */
+    transition: background 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+}
+
+.toggle-controls-btn:hover {
+    background: rgba(0, 100, 200, 0.9);
+    box-shadow: 0 0 15px rgba(0, 150, 255, 0.7);
+    color: #fff;
+}
+
+/* Media query para ajustar el botón en pantallas pequeñas */
+@media (max-width: 768px) {
+    .toggle-controls-btn {
+        top: 15px;
+        right: 15px;
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+}
     </style>
      <!-- Cargar los datos completos de la Biblia -->
 <!-- Primero carga verseData.js -->
     <script src="verseData.js"></script>
 </head>
 <body>
+    <body>
+    <div class="container">
+        <div class="header">
+            <div class="daily-verse-indicator" id="daily-verse-indicator">
+                <i class="fas fa-calendar-day"></i>
+                <span id="daily-verse-label">Hoy aún no has visto el versículo del día</span>
+            </div>
+        </div>
+        
+        <div class="app-container">
+            <div class="controls" id="controls-section"> 
+                </div>
+            
+            <div class="bible-display" id="bible-display"> 
+                <div class="chapter-header">
+                    <h2 class="chapter-title neon-blue" id="chapter-title">Versículo del Día</h2>
+                    <p class="chapter-subtitle" id="chapter-subtitle">La Palabra de Dios para hoy</p>
+                </div>
+                
+                <div id="verses-container">
+                    </div>
+            </div>
+        </div>
+        
+        </div>
+
+    <button id="toggle-controls-btn" class="toggle-controls-btn">
+        <i class="fas fa-eye-slash"></i> Esconder Controles
+    </button>
+
+    </body>
     <div class="container">
         <div class="header">
             <h1 class="title">Biblia Neon</h1>
@@ -976,6 +1060,123 @@
             loadBooks(); // Carga libros del testamento por defecto (Antiguo)
             getDailyVerse(); // Muestra el versículo del día al cargar la página
         });
+        // ... (tu código existente de bibleData y verseData) ...
+
+// Referencias a los nuevos elementos del DOM
+const controlsSection = document.getElementById('controls-section');
+const toggleControlsBtn = document.getElementById('toggle-controls-btn');
+const bibleDisplay = document.getElementById('bible-display'); // Referencia al div de visualización
+
+let controlsAreHidden = false; // Variable para controlar el estado de visibilidad de los controles
+
+// --- Función para alternar la visibilidad de los controles ---
+function toggleControlsVisibility() {
+    controlsAreHidden = !controlsAreHidden; // Cambia el estado
+    
+    if (controlsAreHidden) {
+        controlsSection.classList.add('hidden');
+        bibleDisplay.classList.add('expanded');
+        toggleControlsBtn.innerHTML = '<i class="fas fa-eye"></i> Mostrar Controles';
+    } else {
+        controlsSection.classList.remove('hidden');
+        bibleDisplay.classList.remove('expanded');
+        toggleControlsBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Esconder Controles';
+    }
+    // Asegurarse de que el scroll funcione correctamente después del cambio
+    // setTimeout(() => versesContainer.scrollTop = 0, 500); // Opcional: Ir al inicio después de un breve retardo
+}
+
+// --- Asigna el evento click al botón de alternar ---
+toggleControlsBtn.addEventListener('click', toggleControlsVisibility);
+
+// --- Modifica tu función displayChapter para esconder los controles automáticamente ---
+function displayChapter(highlightVerse = null) {
+    versesContainer.innerHTML = '';
+    const selectedBookName = bookSelect.value;
+    const selectedChapter = parseInt(chapterSelect.value);
+    
+    const bookInfo = bibleData[currentTestament + 'Testament'].find(b => b.name === selectedBookName);
+    chapterTitle.textContent = `${selectedBookName} - Capítulo ${selectedChapter}`;
+    chapterSubtitle.textContent = bookInfo ? bookInfo.subtitle : '';
+
+    const verses = verseData[selectedBookName] ? verseData[selectedBookName][selectedChapter] : [];
+
+    if (verses && verses.length > 0) {
+        verses.forEach((verseText, index) => {
+            const verseNumber = index + 1;
+            const verseDiv = document.createElement('div');
+            verseDiv.classList.add('verse');
+            if (highlightVerse && verseNumber === highlightVerse) {
+                verseDiv.classList.add('daily-verse-highlight');
+            }
+
+            const numberSpan = document.createElement('span');
+            numberSpan.classList.add('verse-number');
+            numberSpan.textContent = verseNumber + ".";
+
+            const textSpan = document.createElement('span');
+            textSpan.classList.add('verse-text');
+            textSpan.textContent = verseText;
+
+            verseDiv.appendChild(numberSpan);
+            verseDiv.appendChild(textSpan);
+            versesContainer.appendChild(verseDiv);
+        });
+
+        if (highlightVerse) {
+            const highlightedElement = versesContainer.querySelector(`.verse:nth-child(${highlightVerse})`);
+            if (highlightedElement) {
+                highlightedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+        
+        // --- Después de cargar los versículos, esconde los controles si no están ya ocultos ---
+        if (!controlsAreHidden) {
+            toggleControlsVisibility();
+        }
+
+    } else {
+        versesContainer.innerHTML = '<p class="neon-red">No se encontraron versículos para este capítulo.</p>';
+        // Si no hay versículos, asegúrate de que los controles estén visibles para que el usuario pueda cambiar la selección
+        if (controlsAreHidden) {
+            toggleControlsVisibility();
+        }
+    }
+}
+
+// --- Asegúrate de que los controles se muestren cuando el usuario interactúe con ellos ---
+// Añade esta lógica a tus event listeners existentes:
+testamentSelect.addEventListener('change', () => { 
+    if (controlsAreHidden) toggleControlsVisibility(); // Si están ocultos, mostrarlos
+    loadBooks(); 
+});
+bookSelect.addEventListener('change', () => { 
+    if (controlsAreHidden) toggleControlsVisibility(); // Si están ocultos, mostrarlos
+    loadChapters(); 
+});
+chapterSelect.addEventListener('change', () => { 
+    if (controlsAreHidden) toggleControlsVisibility(); // Si están ocultos, mostrarlos
+    updateVerseInputMax(); 
+    displayChapter(); 
+});
+verseInput.addEventListener('change', () => { 
+    if (controlsAreHidden) toggleControlsVisibility(); // Si están ocultos, mostrarlos
+    // Lógica para ir a un versículo específico si es necesario
+});
+searchInput.addEventListener('input', () => { 
+    if (controlsAreHidden) toggleControlsVisibility(); // Si están ocultos, mostrarlos
+    // Lógica de búsqueda
+});
+
+prevBtn.addEventListener('click', () => { goToPrevChapter(); if (controlsAreHidden) toggleControlsVisibility(); });
+nextBtn.addEventListener('click', () => { goToNextChapter(); if (controlsAreHidden) toggleControlsVisibility(); });
+randomBtn.addEventListener('click', () => { getRandomVerse(); if (controlsAreHidden) toggleControlsVisibility(); });
+todayBtn.addEventListener('click', () => { getDailyVerse(); if (controlsAreHidden) toggleControlsVisibility(); }); // Asegúrate de tener la función getDailyVerse()
+
+
+// ... (el resto de tus funciones como loadBooks, loadChapters, updateVerseInputMax, etc.) ...
+// Recuerda que para getRandomVerse y getDailyVerse, también deberías llamar a displayChapter
+// después de determinar el versículo a mostrar, para que se aplique la lógica de ocultar.
     </script>
 </body>
 </html>
